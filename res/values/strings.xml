@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">amuterm</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="button_usb_reload">…</string>
+    <string name="button_bluetooth_reload">…</string>
+    <string name="button_connect">connect</string>
+    <string name="button_disconnect">disconnect</string>
+    <string name="title_tab1">connection</string>
+    <string name="title_tab2">terminal</string>
+    <string name="title_tab3">other</string>
+
+</resources>
