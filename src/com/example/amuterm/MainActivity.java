@@ -40,6 +40,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.bluetooth.BluetoothAdapter;
 
+import com.dodo.tools.*;
+
 
 
 public class MainActivity extends TabActivity {
@@ -127,11 +129,11 @@ public class MainActivity extends TabActivity {
             if(!mTxQueue.isEmpty()){
                 byte[] data = mTxQueue.poll();
                 if(mConnected.get()){
-StringBuilder sb = new StringBuilder();
-for(int i=0; i<data.length; i++) sb.append(String.format("%02X", data[i])).append(',');
+//StringBuilder sb = new StringBuilder();
+//for(int i=0; i<data.length; i++) sb.append(String.format("%02X", data[i])).append(',');
 //toastMsg("send: " + sb.toString(), true);
-//                    mChannel.write(data);
-toastMsg("send: " + mChannel.stateString, true);
+                    mChannel.write(data);
+//toastMsg("send: " + mChannel.stateString, true);
                 }
             }
         }

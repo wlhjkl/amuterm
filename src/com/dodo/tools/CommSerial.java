@@ -1,0 +1,1 @@
+/home/qwer/work/projects/android/libs/com/dodo/tools/CommSerial.java
