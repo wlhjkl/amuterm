@@ -13,24 +13,24 @@
                 <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="channel:" />
                     <Spinner android:id="@+id/channelType" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:entries="@array/channels" />
-                    <Button android:id="@+id/bConnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="+" android:textColor="#00007F" android:textStyle="bold" />
-                    <Button android:id="@+id/bDisconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="-" android:textColor="#7F0000" android:textStyle="bold" />
+                    <Button android:id="@+id/bConnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="V" android:textColor="#00007F" android:textStyle="bold" />
+                    <Button android:id="@+id/bDisconnect" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="X" android:textColor="#7F0000" android:textStyle="bold" />
                 </LinearLayout>
-                <LinearLayout android:id="@+id/lChUsb" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
+                <LinearLayout android:id="@+id/chBt" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
+                    <Button android:id="@+id/btReload" style="?android:attr/buttonStyleSmall" android:layout_gravity="center" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=".." />
+                    <Spinner android:id="@+id/btDevs" android:layout_width="0dp" android:layout_gravity="center" android:layout_height="wrap_content" android:layout_weight="1" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/chSerial" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
+                    <Button android:id="@+id/serialReload" style="?android:attr/buttonStyleSmall" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=".." />
                     <Spinner android:id="@+id/serialPorts" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" />
-                    <Button android:id="@+id/bUsbReload" style="?android:attr/buttonStyleSmall" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=".." />
                     <Spinner android:id="@+id/serialBauds" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" android:entries="@array/baudrates" />
                     <Spinner android:id="@+id/serialParity" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" android:entries="@array/parities" />
                     <Spinner android:id="@+id/serialStops" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" android:entries="@array/stops" />
 			    </LinearLayout>
-                <LinearLayout android:id="@+id/lChTcp" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
+                <LinearLayout android:id="@+id/chTcp" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
 			        <EditText android:id="@+id/tcpAddr" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:ems="16" android:inputType="number|numberDecimal" android:digits="0123456789." />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=":" />
                     <EditText android:id="@+id/tcpPort" android:layout_width="wrap_content" android:layout_height="wrap_content" android:ems="4" android:inputType="number" />
-                </LinearLayout>
-                <LinearLayout android:id="@+id/lChBt" android:visibility="gone" android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
-                    <Spinner android:id="@+id/btDevs" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
-                    <Button android:id="@+id/bBtReload" style="?android:attr/buttonStyleSmall" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=".." />
                 </LinearLayout>
             </LinearLayout>
             
@@ -46,7 +46,7 @@
                 <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" >
 	                <TextView android:id="@+id/rxLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:fontFamily="monospace"/>
                     <CheckBox android:id="@+id/rxEn" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="RX" />
-	                <CheckBox android:id="@+id/rxCrLf" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CRLF" />
+	                <CheckBox android:id="@+id/rxCrLf" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CrLf" />
                     <CheckBox android:id="@+id/rxHex" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0x" />
                     <Button android:id="@+id/rxClear" style="?android:attr/buttonStyleSmall" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="clr" />
                     <Button android:id="@+id/rxSave" style="?android:attr/buttonStyleSmall" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="save" />

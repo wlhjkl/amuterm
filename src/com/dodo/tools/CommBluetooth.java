@@ -49,24 +49,27 @@ public class CommBluetooth extends CommGeneric {
     }
 
     @Override public byte[] read(){
+        stateString = "";
         if(isOpen.get()){ try{
             int len = inputStream.available();
             byte[] data = new byte[len];
             len = inputStream.read(data);
             if(len != data.length) return Arrays.copyOf(data, len);
             else return data;
-        }catch(Exception e){}}
+        }catch(Exception e){ stateString = e.toString(); }}
         return new byte[0];
     }
     @Override public int read(byte data[]){
+        stateString = "";
         if(isOpen.get()){ try{
-            return inputStream.read(data);
-        }catch(Exception e){ return 0; }}
+            return inputStream.read(data, 0, Math.min(data.length, inputStream.available()));
+        }catch(Exception e){ stateString = e.toString(); }}
         return 0;
     }
     @Override public void write(byte data[]){
+        stateString = "";
         if(isOpen.get()){ try { outputStream.write(data);
-        }catch(Exception e){}}
+        }catch(Exception e){ stateString = e.toString(); }}
     }
     
     // get device name

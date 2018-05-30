@@ -54,7 +54,7 @@ public class CommSocket extends CommGeneric {
     }
     @Override public int read(byte data[]){
         if(isOpen.get()){ try{
-            return inputStream.read(data);
+            return inputStream.read(data, 0, Math.min(data.length, inputStream.available()));
         }catch(Exception e){ return 0; }}
         return 0;
     }

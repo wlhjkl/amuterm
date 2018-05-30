@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="channels">
+        <item>bt</item>
         <item>usb</item>
         <item>tcp</item>
-        <item>bt</item>
     </string-array>
     <string-array name="baudrates">
         <item>1200</item>

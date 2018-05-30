@@ -2,8 +2,6 @@ package com.example.amuterm;
 
 import java.lang.Thread;
 import java.lang.Runnable;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -19,6 +17,7 @@ import android.app.TabActivity;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -43,8 +42,9 @@ public class MainActivity extends TabActivity {
     private TabActivity activity = this;
     
     private CommGeneric channel;  // connected channel
+    private int devBt,devUsb;
     
-    private static final int CH_USB = 0, CH_TCP = 1, CH_BT = 2;
+    private static final int CH_BT=0, CH_SERIAL=1, CH_TCP=2;
     
     private EditText txText, rxText;
     private boolean txCr,txLf,txHex,rxEn,rxCrLf,rxHex;
@@ -58,27 +58,28 @@ public class MainActivity extends TabActivity {
     }
     
     // socket poll timer/task
-    private String  mTxString;
-    private boolean mRxClear = false;
-    private int mRxLine = 0;
-    private TextView mRxLineText;
-    private final ConcurrentLinkedQueue<String> mRxQueue = new ConcurrentLinkedQueue<String>();
-    private final ConcurrentLinkedQueue<byte[]> mTxQueue = new ConcurrentLinkedQueue<byte[]>();
-    private final byte[] mTxBuf = new byte[8192];
+    private String  txString;
+    private boolean rxClear = false;
+    private int rxLine,rxLinePrev, pollCnt = 0;
+    private TextView rxLineText;
+    private final ConcurrentLinkedQueue<String> rxQueue = new ConcurrentLinkedQueue<String>();
+    private final ConcurrentLinkedQueue<byte[]> txQueue = new ConcurrentLinkedQueue<byte[]>();
+    private byte[] txBuf = new byte[8192], rxBuf = new byte[8192];
     private final Timer pollTimer = new Timer();
     private final TimerTask pollTask = new TimerTask(){
-        private byte[] rxBuf = new byte[8192];
         private StringBuilder sb = new StringBuilder();
         @Override public void run(){
+            pollCnt++;
             if((channel != null)&&(channel.isOpen.get())){
                 int len = channel.read(rxBuf);
+if(channel.stateString.length() > 0) Log.e("AMuTerm", "RXE: " + channel.stateString);
                 if(len > 0){
                     sb.setLength(0);
                     for(int i=0; i<len; i++){
                         if(rxBuf[i] == '\n'){
                             if(rxCrLf) sb.append("\\n");
                             sb.append('\n');
-                            mRxLine++;
+                            rxLine++;
                         }else if(rxBuf[i] == '\r'){
                             if(rxCrLf) sb.append("\\r");
                         }else if((rxBuf[i] < ' ')||(rxBuf[i] > 127)){
@@ -89,36 +90,38 @@ public class MainActivity extends TabActivity {
                         }
                     }
                     if(rxEn){
-                        mRxQueue.add(sb.toString());
+                        rxQueue.add(sb.toString());
                     }
                 }
             }
             // update RX text
-            if(!mRxQueue.isEmpty() || mRxClear){
+            if(!rxQueue.isEmpty() || rxClear){
                 runOnUiThread(new Runnable(){ @Override public void run(){
-                    if(mRxClear){
-                        mRxClear = false;
-                        mRxQueue.clear();
+                    if(rxClear){
+                        rxClear = false;
+                        rxQueue.clear();
                         rxText.setText("");
-                        mRxLine = 0;
+                        rxLine = 0;
                     }
-                    if(!mRxQueue.isEmpty()){
+                    if(!rxQueue.isEmpty()){
                         StringBuilder s = new StringBuilder();
-                        while(!mRxQueue.isEmpty()) s.append(mRxQueue.poll());
+                        while(!rxQueue.isEmpty()) s.append(rxQueue.poll());
                         rxText.append(s.toString());
                     }
-                    mRxLineText.setText(String.format("% 4d",mRxLine));
+                }});
+            }
+            // show RX line
+            if(rxLine != rxLinePrev){
+                runOnUiThread(new Runnable(){ @Override public void run(){
+                    rxLineText.setText(String.format("% 4d",rxLine));
                 }});
             }
             // send bytes from TX queue
-            if(!mTxQueue.isEmpty()){
-                byte[] data = mTxQueue.poll();
+            if(!txQueue.isEmpty()){
+                byte[] data = txQueue.poll();
                 if((channel != null)&&(channel.isOpen.get())){
-//StringBuilder sb = new StringBuilder();
-//for(int i=0; i<data.length; i++) sb.append(String.format("%02X", data[i])).append(',');
-//toastMsg("send: " + sb.toString(), true);
                     channel.write(data);
-//toastMsg("send: " + mChannel.stateString, true);
+if(channel.stateString.length() > 0) Log.e("AMuTerm", "TXE: " + channel.stateString);
                 }
             }
         }
@@ -129,6 +132,8 @@ public class MainActivity extends TabActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, 0);
         
         ((Spinner)findViewById(R.id.channelType)).setSelection(prefs.getInt("channel.type", 0));
+        devBt = prefs.getInt("dev.bt", 0);
+        devUsb = prefs.getInt("dev.usb", 0);
 
         ((Spinner)findViewById(R.id.serialBauds)).setSelection(
             ((ArrayAdapter<String>)((Spinner)findViewById(R.id.serialBauds)).getAdapter()).getPosition(prefs.getString("serial.baud", "9600")));
@@ -143,7 +148,7 @@ public class MainActivity extends TabActivity {
         txCr     = prefs.getBoolean("tx.cr",  false);
         txLf     = prefs.getBoolean("tx.lf",  false);
         txHex    = prefs.getBoolean("tx.hex", false);
-        mTxString = prefs.getString("tx.text", "");
+        txString = prefs.getString("tx.text", "");
         rxEn     = prefs.getBoolean("rx.en",  true);
         rxCrLf   = prefs.getBoolean("rx.crlf",  false);
         rxHex    = prefs.getBoolean("rx.hex", false);
@@ -151,6 +156,8 @@ public class MainActivity extends TabActivity {
     private void prefsSave(){
         getSharedPreferences(PREFS_NAME, 0).edit()
         .putInt("channel.type", ((Spinner)findViewById(R.id.channelType)).getSelectedItemPosition())
+        .putInt("dev.bt", ((Spinner)findViewById(R.id.btDevs)).getSelectedItemPosition())
+        .putInt("dev.usb", ((Spinner)findViewById(R.id.serialPorts)).getSelectedItemPosition())
         .putString("serial.baud", (String)((Spinner)findViewById(R.id.serialBauds)).getSelectedItem())
         .putString("serial.parity", (String)((Spinner)findViewById(R.id.serialParity)).getSelectedItem())
         .putString("serial.stops", (String)((Spinner)findViewById(R.id.serialStops)).getSelectedItem())
@@ -185,10 +192,7 @@ public class MainActivity extends TabActivity {
             if(channel != null){
                 channel.close();
                 channel = null;
-                runOnUiThread(new Runnable(){ @Override public void run(){
-                    ((Button)findViewById(R.id.bConnect)).setVisibility(View.VISIBLE);
-                    ((Button)findViewById(R.id.bDisconnect)).setVisibility(View.GONE);
-                }});
+                enableUI();
             }
         }}){{ start(); }};
     }
@@ -206,7 +210,7 @@ public class MainActivity extends TabActivity {
         
         txText     = ((EditText)findViewById(R.id.txText));
         rxText     = ((EditText)findViewById(R.id.rxText));
-        mRxLineText = ((TextView)findViewById(R.id.rxLine));
+        rxLineText = ((TextView)findViewById(R.id.rxLine));
 
         // channel connect
         ((Button)findViewById(R.id.bConnect)).setOnClickListener(new View.OnClickListener(){
@@ -218,7 +222,7 @@ public class MainActivity extends TabActivity {
                         }});
                         CommGeneric ch = null;
                         switch(spChannelType.getSelectedItemPosition()){
-                        case CH_USB:
+                        case CH_SERIAL:
                             String sp = (String)((Spinner)findViewById(R.id.serialPorts)).getSelectedItem();
                             ch = new CommSerial(sp){{
                                 open();
@@ -243,6 +247,7 @@ toast("Connecting to Bluetooth: " + btDev, false);
                             break;
                         }
                         if((ch != null)&&(ch.isOpen.get())){
+                            disableUI();
                             channel = ch;
                             runOnUiThread(new Runnable(){ @Override public void run(){
                                 // fix screen rotation
@@ -252,14 +257,9 @@ toast("Connecting to Bluetooth: " + btDev, false);
                                     (rot == Surface.ROTATION_180) ? ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT :
                                     ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                                 );
-                                ((Button)findViewById(R.id.bConnect)).setVisibility(View.GONE);
-                                ((Button)findViewById(R.id.bDisconnect)).setVisibility(View.VISIBLE);
-                                mRxClear = true; // clear RX
+                                rxClear = true; // clear RX
                             }});
                         }
-                        runOnUiThread(new Runnable(){ @Override public void run(){
-                            ((Button)findViewById(R.id.bConnect)).setEnabled(true);
-                        }});
                     }}){{ start(); }};
                 }
             }
@@ -278,9 +278,9 @@ toast("Connecting to Bluetooth: " + btDev, false);
         spChannelType = (Spinner)findViewById(R.id.channelType);
         ((Spinner)findViewById(R.id.channelType)).setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
             @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id){
-                ((LinearLayout)findViewById(R.id.lChUsb)).setVisibility((position == CH_USB) ? View.VISIBLE : View.GONE);
-                ((LinearLayout)findViewById(R.id.lChTcp)).setVisibility((position == CH_TCP) ? View.VISIBLE : View.GONE);
-                ((LinearLayout)findViewById(R.id.lChBt)).setVisibility((position == CH_BT)   ? View.VISIBLE : View.GONE);
+                ((LinearLayout)findViewById(R.id.chSerial)).setVisibility((position == CH_SERIAL) ? View.VISIBLE : View.GONE);
+                ((LinearLayout)findViewById(R.id.chTcp)).setVisibility((position == CH_TCP) ? View.VISIBLE : View.GONE);
+                ((LinearLayout)findViewById(R.id.chBt)).setVisibility((position == CH_BT)   ? View.VISIBLE : View.GONE);
             }
             @Override public void onNothingSelected(AdapterView<?> parent){}
         });
@@ -288,14 +288,16 @@ toast("Connecting to Bluetooth: " + btDev, false);
         // serial ports
         ((Spinner)findViewById(R.id.serialPorts)).setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, new ArrayList<String>()));
         updateUsb();
-        ((Button)findViewById(R.id.bUsbReload)).setOnClickListener(new View.OnClickListener(){
+        ((Spinner)findViewById(R.id.serialPorts)).setSelection(devUsb);
+        ((Button)findViewById(R.id.serialReload)).setOnClickListener(new View.OnClickListener(){
             @Override public void onClick(View arg0){ updateUsb(); }
         });
         
         // bluetooth devices
         ((Spinner)findViewById(R.id.btDevs)).setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, new ArrayList<String>()));
         updateBluetooth();
-        ((Button)findViewById(R.id.bBtReload)).setOnClickListener(new View.OnClickListener(){
+        ((Spinner)findViewById(R.id.btDevs)).setSelection(devBt);
+        ((Button)findViewById(R.id.btReload)).setOnClickListener(new View.OnClickListener(){
             @Override public void onClick(View arg0){ updateBluetooth(); }
         });
         
@@ -322,20 +324,20 @@ toast("Connecting to Bluetooth: " + btDev, false);
                     int len = 0;
                     for(int i=0; i<s.length(); i++){
                         int c = (int)s.charAt(i);
-                        if((c >= 32)&&(c <= 127)) mTxBuf[len++] = (byte)c;
-                        else if((c == 10)||(c == 13)) mTxBuf[len++] = (byte)c;
+                        if((c >= 32)&&(c <= 127)) txBuf[len++] = (byte)c;
+                        else if((c == 10)||(c == 13)) txBuf[len++] = (byte)c;
                     }
-                    if(txCr) mTxBuf[len++] = 13;
-                    if(txLf) mTxBuf[len++] = 10;
+                    if(txCr) txBuf[len++] = 13;
+                    if(txLf) txBuf[len++] = 10;
 //StringBuilder sb = new StringBuilder();
 //for(int i=0; i<len; i++) sb.append(String.format("%02X", mTxBuf[i])).append(',');
 //toastMsg("send: " + sb.toString(), true);
-                    if(len > 0) mTxQueue.add(Arrays.copyOf(mTxBuf, len));
-toast("send: " + mTxQueue.size(), false);
+                    if(len > 0) txQueue.add(Arrays.copyOf(txBuf, len));
+//toast("send: " + txQueue.size() + " " + pollCnt, false);
                 }
             }
         });
-        txText.setText(mTxString);
+        txText.setText(txString);
  
         ((CheckBox)findViewById(R.id.rxEn)).setChecked(rxEn);
         ((CheckBox)findViewById(R.id.rxEn)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
@@ -350,7 +352,7 @@ toast("send: " + mTxQueue.size(), false);
             @Override public void onCheckedChanged(CompoundButton buttonView,boolean isChecked){ rxHex = isChecked; }
         });
         ((Button)findViewById(R.id.rxClear)).setOnClickListener(new View.OnClickListener(){
-            @Override public void onClick(View arg0){ mRxClear = true; }
+            @Override public void onClick(View arg0){ rxClear = true; }
         });
         ((Button)findViewById(R.id.rxSave)).setOnClickListener(new View.OnClickListener(){
             @Override public void onClick(View arg0){
@@ -404,15 +406,22 @@ toast("External media not available", true);
         getTabHost().addTab(tabSpec);
     }
 
-    @Override public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
+    private int uiIds[] = { R.id.bConnect,R.id.channelType,R.id.btDevs,R.id.btReload,R.id.tcpAddr,R.id.tcpPort,
+        R.id.serialPorts,R.id.serialBauds,R.id.serialParity,R.id.serialStops,R.id.serialReload
+    };
+    private void disableUI(){
+        runOnUiThread(new Runnable(){ @Override public void run(){
+            ((Button)findViewById(R.id.bConnect)).setVisibility(View.GONE);
+            ((Button)findViewById(R.id.bDisconnect)).setVisibility(View.VISIBLE);
+            for(int id : uiIds)findViewById(id).setEnabled(false);
+        }});
     }
-    @Override public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings){
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+    private void enableUI(){
+        runOnUiThread(new Runnable(){ @Override public void run(){
+            ((Button)findViewById(R.id.bConnect)).setVisibility(View.VISIBLE);
+            ((Button)findViewById(R.id.bDisconnect)).setVisibility(View.GONE);
+
+            for(int id : uiIds)findViewById(id).setEnabled(true);
+        }});
     }
 }
